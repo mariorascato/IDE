@@ -13,5 +13,12 @@ bool called_function(progetto project,int id_chiamante, int id_chiamata);
 module get_module(progetto progetto);
 char** cyclic_call_internal(progetto progetto);
 char* project_structure(progetto progetto);
-int* exist_cyclic(progetto progetto, int source_id);
+int** exist_cyclic(progetto progetto, int source_id);
+void findAllPathsUtil(progetto progetto, int u, int dst, int visited[], int path[], int pathLen, int ** allPaths, int *pathCount);
+module get_function_module(progetto progetto, int id_function);
+void print_functions_cycle(progetto my_project , int** paths);
+bool vertex_exists(progetto progetto, int vertex_id);
+char* path_to_string(int* path);
+bool is_a_cycle_path(progetto progetto, int * path);
+void print_string_array(char **array);
 
