@@ -44,31 +44,32 @@ int main() {
 
 
     // Crea chiamate di funzione
-    called_function(my_project,0,1);
-    called_function(my_project,3,1);
-    called_function(my_project,3,2);
+    //called_function(my_project,0,1);
+    //called_function(my_project,3,1);
+    //called_function(my_project,3,2);
     called_function(my_project,1,2);
     called_function(my_project,1,0);
     called_function(my_project,3,0);
     called_function(my_project,2,3);
     called_function(my_project,1,3);
+    called_function(my_project,3,1);
 
 
 
 
-    //int** paths = exist_cyclic(my_project,0 );
+    int** paths = exist_cyclic(my_project,0);
 
-    //print_functions_cycle(my_project,paths);
+    print_functions_cycle(my_project,paths);
 
 
     //printf("%s", path_to_string(paths[0]));
 
-   char** string_paths = cyclic_call_internal(my_project);
+    char** string_paths = cyclic_call_internal(my_project);
     int count = 0;
 
 
 
-    print_string_array(string_paths);
+    //print_string_array(string_paths);
 
 }
 progetto create_project(char * name, int max_size){
@@ -320,24 +321,34 @@ int** exist_cyclic(progetto progetto, int source_id) {
         // Resetta `visited` a zero per ogni nuovo percorso
         memset(visited, 0, progetto->n_functions * sizeof(int));
         findAllPathsUtil(progetto, source_id, i, visited, temp_path, 0, paths, &path_count);
+
     }
     //printf("%d\n",path_count);
-    for(int i = 0; i < path_count; i++){
-
-        if(!is_a_cycle_path(progetto,paths[i])){
-            free(paths[i]);
+    int dim = 0;
+    int** definitive_path = (int**)malloc(progetto->max_size *progetto->n_functions * sizeof(int*));
+    for(int i = 0 ; i < path_count; i++) {
+        if (!is_a_cycle_path(progetto,paths[i])){
             paths[i] = NULL;
+        } else {
+            definitive_path[dim] = (int*) malloc(((progetto->n_functions + 1) * sizeof(int)));
+            definitive_path[dim] = paths[i] ;
+
+            dim++;
         }
     }
 
 
 
-
+    for (int k = dim; k < progetto->max_size * progetto->n_functions; k++) {
+        definitive_path[k] = NULL;
+    }
     free(visited);
     free(temp_path);
+    free(paths);
 
 
-    return paths;
+    return definitive_path;
+
 
 
 }
@@ -360,6 +371,7 @@ void print_functions_cycle(progetto my_project , int** paths){
         // Stampa i percorsi trovati
         printf("Percorsi trovati:\n");
         for (int i = 0; i < my_project->max_size; i++) {
+            printf("%d\n",i);
             if (paths[i] == NULL) continue;
             for (int j = 0; j < my_project->n_functions && paths[i][j] != -1; j++) {
                 printf("%d ", paths[i][j]);
@@ -371,38 +383,46 @@ void print_functions_cycle(progetto my_project , int** paths){
     }
 }
 char** cyclic_call_internal(progetto progetto) {
-    int **int_path;
-    char **strings_paths = (char **) malloc(progetto->max_size * progetto->n_functions * sizeof(char *));
+
+    int max_size = progetto->max_size * progetto->n_functions;
+
+    char** strings_paths = (char**) malloc(max_size * sizeof(char*));
+    if (strings_paths == NULL) {
+        perror("Failed to allocate memory for strings_paths");
+        exit(EXIT_FAILURE);
+    }
 
     int j = 0;
 
-    for(int i = 0; i < progetto->n_functions; i++){
-        int_path = exist_cyclic(progetto,i);
-        if(int_path == NULL) continue;
+    for (int i = 0; i < progetto->n_functions; i++) {
+        int** int_path = exist_cyclic(progetto, i);
+        if (int_path == NULL) continue;
 
-        while(int_path[j]!=NULL){
-            strings_paths[j] = (char *) malloc((5 * progetto->n_functions) * sizeof(char ));
-            strings_paths[j] = path_to_string(int_path[j]);
-            j++;
+        int k = 0;
+        while (int_path[k] != NULL) {
+            char* path_str = path_to_string(int_path[k]);
+            if (path_str != NULL) {
+                strings_paths[j] = path_str;
+                printf("%s\n", strings_paths[j]);
+                j++;
+            }
+            k++;
         }
 
     }
-    char **definitive_strings_paths = (char **) malloc(j * sizeof(char *));
-    for(int h = 0; h < j; h++){
-        definitive_strings_paths[h] = (char *) malloc((5 * progetto->n_functions) * sizeof(char ));
-        definitive_strings_paths[h] = strdup(strings_paths[h]);
-    }
-    definitive_strings_paths[j-1][0] = '\0';
 
-    free(strings_paths);
-    return definitive_strings_paths;
+    for (int v = j; v < max_size; v++) {
+        strings_paths[v] = NULL;
+    }
+
+    return strings_paths;
 
 }
 
 
 
 char* path_to_string(int* path) {
-    if(path == NULL) return NULL;
+    if(path == NULL || path[0] == -1) return NULL;
 
     int len = 0;
     for (int i = 0; path[i] != -1; i++) {
@@ -434,8 +454,8 @@ bool is_a_cycle_path(progetto progetto, int * path){
         i++;
     }
 
+
     if (path[i] == -1) {
-        // Controllo che il primo e l'ultimo nodo del ciclo siano collegati
         if (progetto->called_functions[path[i - 1]][path[0]]) {
             return true;
         } else {
@@ -448,9 +468,10 @@ bool is_a_cycle_path(progetto progetto, int * path){
 void print_string_array(char **array) {
     int i = 0;
     if(array[i] == NULL) return;
-    while (array[i][0] != '\0'){
+    while (array[i] != NULL){
         printf("%s\n",array[i]);
         i++;
     }
 }
+
 
