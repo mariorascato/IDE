@@ -5,12 +5,14 @@
 
 struct _progetto{
     char * name_project;
+    int n_modules;
     int n_functions;
     int max_size;
     node_module  modules;
     bool** called_functions;
 };
 struct _module{
+    int id_module;
     char * name;
     char * path_h;
     char * path_c;
@@ -35,24 +37,27 @@ int main() {
     // Aggiungi moduli al progetto
     add_module_to_project("path/to/header1.h", "path/to/source1.c", false, my_project, "Module1");
     add_module_to_project("path/to/header2.h", "path/to/source2.c", false, my_project, "Module2");
-
+    add_module_to_project("path/to/header3.h", "path/to/source3.c", true, my_project, "Module3");
     // Aggiungi funzioni ai moduli
     add_function_to_module(my_project, "Module1", "void functionA()");
     add_function_to_module(my_project, "Module1", "void functionB()");
     add_function_to_module(my_project, "Module2", "void functionC()");
     add_function_to_module(my_project,"Module2","void functionD()");
+    add_function_to_module(my_project,"Module3","void functionE()");
 
 
     // Crea chiamate di funzione
-    //called_function(my_project,0,1);
-    //called_function(my_project,3,1);
-    //called_function(my_project,3,2);
+    called_function(my_project,0,1);
+    called_function(my_project,3,1);
+    called_function(my_project,3,2);
     called_function(my_project,1,2);
     called_function(my_project,1,0);
     called_function(my_project,3,0);
     called_function(my_project,2,3);
     called_function(my_project,1,3);
     called_function(my_project,3,1);
+    called_function(my_project,4,0);
+    called_function(my_project,1,4);
 
 
 
@@ -64,12 +69,11 @@ int main() {
 
     //printf("%s", path_to_string(paths[0]));
 
-    char** string_paths = cyclic_call_internal(my_project);
+    //char** string_paths = cyclic_call_internal(my_project);
     int count = 0;
-
-
-
     //print_string_array(string_paths);
+    char * structure = project_structure(my_project);
+    printf("%s",structure);
 
 }
 progetto create_project(char * name, int max_size){
@@ -78,6 +82,7 @@ progetto create_project(char * name, int max_size){
     progetto->max_size = max_size;
     progetto->name_project = strdup(name);
     progetto->n_functions = 0;
+    progetto->n_modules = 0;
     progetto->modules = NULL;
 
     progetto->called_functions = (bool**) malloc(sizeof(bool*) * max_size);
@@ -106,6 +111,8 @@ bool add_module_to_project(const char * path_h, char * path_c, bool external,pro
 
     module->functions = NULL;
     module->external = external;
+    module->id_module = project->n_modules;
+    project->n_modules ++;
 
 
     node_module current = project->modules;
@@ -471,6 +478,73 @@ void print_string_array(char **array) {
     while (array[i] != NULL){
         printf("%s\n",array[i]);
         i++;
+    }
+}
+char* project_structure(progetto progetto){
+
+    char * structure = (char*) malloc(sizeof(char) * 1000);
+    structure[0] = '\0';
+    int * indexes = malloc(sizeof(int) * progetto->n_modules);
+    int j;
+
+    node_module modules = progetto->modules;
+
+
+
+    while(modules != NULL){
+        if(!modules->module->external) {
+            strcat(structure, "-  ");
+            strcat(structure, modules->module->name);
+            strcat(structure, "\n");
+            strcat(structure, "  Funzioni:\n");
+
+            node_function functions = modules->module->functions;
+            while (functions != NULL) {
+                strcat(structure, "   - ");
+                strcat(structure, functions->function->signature);
+                strcat(structure, "\n");
+
+                functions = functions->next;
+            }
+            strcat(structure, "  Moduli dipendenti:\n");
+
+            node_function called_function = modules->module->functions;
+            int n_functions;
+             j = 0;
+
+            while(called_function != NULL) {
+                n_functions = progetto->n_functions - 1;
+                while (n_functions >= 0) {
+                    if (progetto->called_functions[called_function->function->id_function][n_functions] &&
+                        get_function_module(progetto, n_functions) != modules->module && !is_already_printed(get_function_module(progetto, n_functions)->id_module,indexes,j)) {
+
+                        strcat(structure, "    -> ");
+                        strcat(structure, get_function_module(progetto, n_functions)->name);
+                        if (get_function_module(progetto, n_functions)->external) strcat(structure, "  (esterno)");
+                        strcat(structure, "\n");
+
+                        indexes[j] = get_function_module(progetto, n_functions)->id_module;
+                        j++;
+                    }
+                    n_functions--;
+                }
+                called_function = called_function->next;
+            }
+        }
+        reset(indexes,j);
+        modules = modules->next;
+    }
+    return structure;
+}
+bool is_already_printed(int index, const int * indexes, int dim){
+    for(int i = 0 ; i < dim ; i++){
+        if(indexes[i] == index) return true;
+    }
+    return false;
+}
+void reset(int * array, int dim){
+    for(int i = 0 ; i < dim ; i++){
+        array[i] = -1;
     }
 }
 

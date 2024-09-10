@@ -21,4 +21,6 @@ bool vertex_exists(progetto progetto, int vertex_id);
 char* path_to_string(int* path);
 bool is_a_cycle_path(progetto progetto, int * path);
 void print_string_array(char **array);
+bool is_already_printed(int index, const int * indexes, int dim);
+void reset(int * array, int dim);
 
