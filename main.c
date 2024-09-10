@@ -36,6 +36,8 @@ int main() {
     char * project_name = (char*) malloc(sizeof(char ) * 20);
     char * signature = (char*) malloc(sizeof(char ) * 40);
     char * nome_modulo = (char*) malloc(sizeof(char ) * 10);
+    FILE *file = fopen("cicli.txt", "w");
+    char** cycle_paths;
     int internal_choice;
     int functions_choice;
     int called_function_choice;
@@ -171,7 +173,17 @@ int main() {
         break;
             case 3:
 
+            cycle_paths = cyclic_call_internal(progetto);
+            for(int i = 0; i < 10; i++){
+                printf("%d",i);
+            printf("%s\n",cycle_paths[i]);
+            }
+            int i = 0;
+                while (cycle_paths[i]!=NULL) {
 
+                    fprintf(file, "%s", cycle_paths[i]);
+                    i++;
+                }
                 break;
             case 4:
                 exit(0);
