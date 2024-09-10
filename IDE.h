@@ -23,4 +23,6 @@ bool is_a_cycle_path(progetto progetto, int * path);
 void print_string_array(char **array);
 bool is_already_printed(int index, const int * indexes, int dim);
 void reset(int * array, int dim);
+void print_modules(progetto progetto);
+void print_modules_and_functions(progetto progetto);
 

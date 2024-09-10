@@ -32,50 +32,158 @@ struct _node_module{
     struct _node_module * next;
 };
 int main() {
-    progetto my_project = create_project("MyProject", 10);
+    int choice;
+    char * project_name = (char*) malloc(sizeof(char ) * 20);
+    char * signature = (char*) malloc(sizeof(char ) * 40);
+    char * nome_modulo = (char*) malloc(sizeof(char ) * 10);
+    int internal_choice;
+    int functions_choice;
+    int called_function_choice;
+    int id_function_calling;
+    int id_function_called;
+    bool internal;
+    char * path_h = (char*) malloc(sizeof(char ) * 40);
+    char * path_c = (char*) malloc(sizeof(char ) * 40);
+    progetto progetto;
 
-    // Aggiungi moduli al progetto
-    add_module_to_project("path/to/header1.h", "path/to/source1.c", false, my_project, "Module1");
-    add_module_to_project("path/to/header2.h", "path/to/source2.c", false, my_project, "Module2");
-    add_module_to_project("path/to/header3.h", "path/to/source3.c", true, my_project, "Module3");
-    // Aggiungi funzioni ai moduli
-    add_function_to_module(my_project, "Module1", "void functionA()");
-    add_function_to_module(my_project, "Module1", "void functionB()");
-    add_function_to_module(my_project, "Module2", "void functionC()");
-    add_function_to_module(my_project,"Module2","void functionD()");
-    add_function_to_module(my_project,"Module3","void functionE()");
+    printf("BENVENUTO NEL SISTEMA SOFTWARE CHE GESTISCE UN PROGETTO.\n");
+    printf("\n");
+    printf("Inserisci il nome del progetto:\n");
+    fgets(project_name, 20, stdin);
 
+    progetto = create_project(project_name,20);
 
-    // Crea chiamate di funzione
-    called_function(my_project,0,1);
-    called_function(my_project,3,1);
-    called_function(my_project,3,2);
-    called_function(my_project,1,2);
-    called_function(my_project,1,0);
-    called_function(my_project,3,0);
-    called_function(my_project,2,3);
-    called_function(my_project,1,3);
-    called_function(my_project,3,1);
-    called_function(my_project,4,0);
-    called_function(my_project,1,4);
+    do {
+        printf("1) Stampa e aggiungi un nuovo modulo al progetto \n");
+        printf("2) Registra una chiamata a funzione\n");
+        printf("3) Salva l'elenco delle chiamate cicliche\n");
+        printf("4) Esci\n");
+        printf("Fai la tua scelta:\n");
 
-
-
-
-    int** paths = exist_cyclic(my_project,0);
-
-    print_functions_cycle(my_project,paths);
+        scanf("%d", &choice);
+        getchar();
 
 
-    //printf("%s", path_to_string(paths[0]));
+        switch (choice) {
+            case 1:
+                print_modules(progetto);
 
-    //char** string_paths = cyclic_call_internal(my_project);
-    int count = 0;
-    //print_string_array(string_paths);
-    char * structure = project_structure(my_project);
-    printf("%s",structure);
+                printf("Inserisci nuovo modulo:\n - inserisci il nome del modulo:\n");
 
+                fgets(nome_modulo, 10, stdin);
+
+                printf("Il modulo inserito è interno?\n");
+
+
+
+                do {
+
+                    printf("1) SI\n");
+                    printf("2) NO,ESTERNO\n");
+                    scanf("%d" ,&internal_choice);
+                    getchar();
+
+                    switch (internal_choice) {
+                        case 1:
+                            internal = true;
+                            break;
+                        case 2:
+                            internal = false;
+                            break;
+                        default:
+                            break;
+                    }
+                } while (internal_choice <= 0 || internal_choice >2);
+
+                if(internal){
+                    printf("inserisci il percorso del file .h: \n");
+                    fgets(path_h, 40, stdin);
+                    printf("Inserisci il percorso del file .c: \n");
+                    fgets(path_c, 40, stdin);
+                }
+                else {
+                    printf("Inserisci il percorso del file .h: \n");
+                    fgets(path_h, 40, stdin);
+                }
+
+                add_module_to_project(path_h,path_c,internal,progetto,nome_modulo);
+
+                do {
+
+                    printf("1) INSERISCI NUOVA FUNZIONE\n");
+                    printf("2) ESCI\n");
+                    scanf("%d" ,&functions_choice);
+                    getchar();
+
+                    switch (functions_choice) {
+                        case 1:
+                            printf("inserisci la signature della funzione: \n");
+                            fgets(signature, 40, stdin);
+                            add_function_to_module(progetto,nome_modulo,signature);
+
+                            break;
+                        case 2:
+                            break;
+                        default:
+                            break;
+                    }
+                } while (functions_choice <= 1 || functions_choice > 2);
+
+
+
+                break;
+            case 2:
+
+
+                do {
+                printf("1) REGISTRA NUOVA CHIAMATA A FUNZIONE\n");
+                printf("2) ESCI\n");
+                scanf("%d" ,&called_function_choice);
+                getchar();
+
+                switch (called_function_choice) {
+                    case 1:
+
+                        do {
+                            print_modules_and_functions(progetto);
+                            printf("Inserisci ID della funzione chiamante\n");
+                            scanf("%d",&id_function_calling);
+                            getchar();
+                        }while (id_function_calling < 0 || id_function_calling > progetto->n_functions - 1);
+
+                        do {
+                            print_modules_and_functions(progetto);
+                            printf("Inserisci ID della funzione chiamata\n");
+                            scanf("%d",&id_function_called);
+                            getchar();
+                        } while (id_function_called < 0 || id_function_called > progetto->n_functions - 1);
+                        called_function(progetto,id_function_calling,id_function_called);
+
+                        break;
+                    case 2:
+                        break;
+                    default:
+                        break;
+                }
+        } while (called_function_choice <= 1 || called_function_choice > 2);
+
+
+        break;
+            case 3:
+
+
+                break;
+            case 4:
+                exit(0);
+            default:
+                break;
+        }
+    } while (1);
 }
+
+
+
+
 progetto create_project(char * name, int max_size){
 
     progetto progetto = (struct _progetto *) malloc(sizeof(struct _progetto));
@@ -547,5 +655,31 @@ void reset(int * array, int dim){
         array[i] = -1;
     }
 }
+void print_modules(progetto progetto){
+    if(progetto->n_modules == 0) return;
 
+    node_module modules = progetto->modules;
 
+    for(int i = 0; i < progetto->n_modules;i++){
+        printf("%s",modules->module->name);
+        modules = modules->next;
+    }
+}
+void print_modules_and_functions(progetto progetto){
+    node_module modules = progetto->modules;
+
+    while (modules != NULL) {
+        printf("- Module: %s", modules->module->name);
+        printf("  Functions:\n");
+
+        node_function functions = modules->module->functions;
+        while (functions != NULL) {
+            printf("    - Function: %s", functions->function->signature);
+            printf("      ID: %d\n", functions->function->id_function);
+
+            functions = functions->next;
+        }
+
+        modules = modules->next;
+    }
+    }
