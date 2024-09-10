@@ -36,7 +36,7 @@ int main() {
     char * project_name = (char*) malloc(sizeof(char ) * 20);
     char * signature = (char*) malloc(sizeof(char ) * 40);
     char * nome_modulo = (char*) malloc(sizeof(char ) * 10);
-    FILE *file = fopen("cicli.txt", "w");
+    FILE *file;
     char** cycle_paths;
     int internal_choice;
     int functions_choice;
@@ -52,6 +52,7 @@ int main() {
     printf("\n");
     printf("Inserisci il nome del progetto:\n");
     fgets(project_name, 20, stdin);
+    project_name[strcspn(project_name, "\n")] = '\0';
 
     progetto = create_project(project_name,20);
 
@@ -73,6 +74,7 @@ int main() {
                 printf("Inserisci nuovo modulo:\n - inserisci il nome del modulo:\n");
 
                 fgets(nome_modulo, 10, stdin);
+                nome_modulo[strcspn(nome_modulo, "\n")] = '\0';
 
                 printf("Il modulo inserito è interno?\n");
 
@@ -100,15 +102,18 @@ int main() {
                 if(internal){
                     printf("inserisci il percorso del file .h: \n");
                     fgets(path_h, 40, stdin);
+                    path_h[strcspn(path_h, "\n")] = '\0';
                     printf("Inserisci il percorso del file .c: \n");
                     fgets(path_c, 40, stdin);
+                    path_c[strcspn(path_c, "\n")] = '\0';
                 }
                 else {
                     printf("Inserisci il percorso del file .h: \n");
                     fgets(path_h, 40, stdin);
+                    path_h[strcspn(path_h, "\n")] = '\0';
                 }
 
-                add_module_to_project(path_h,path_c,internal,progetto,nome_modulo);
+                add_module_to_project(path_h,path_c,!internal,progetto,nome_modulo);
 
                 do {
 
@@ -121,6 +126,7 @@ int main() {
                         case 1:
                             printf("inserisci la signature della funzione: \n");
                             fgets(signature, 40, stdin);
+                            signature[strcspn(signature, "\n")] = '\0';
                             add_function_to_module(progetto,nome_modulo,signature);
 
                             break;
@@ -145,7 +151,8 @@ int main() {
 
                 switch (called_function_choice) {
                     case 1:
-
+                        id_function_called = 0;
+                        id_function_calling = 0;
                         do {
                             print_modules_and_functions(progetto);
                             printf("Inserisci ID della funzione chiamante\n");
@@ -160,6 +167,7 @@ int main() {
                             getchar();
                         } while (id_function_called < 0 || id_function_called > progetto->n_functions - 1);
                         called_function(progetto,id_function_calling,id_function_called);
+                        printf("%d\n",progetto->called_functions[id_function_calling][id_function_called]);
 
                         break;
                     case 2:
@@ -172,18 +180,19 @@ int main() {
 
         break;
             case 3:
-
-            cycle_paths = cyclic_call_internal(progetto);
-            for(int i = 0; i < 10; i++){
-                printf("%d",i);
-            printf("%s\n",cycle_paths[i]);
-            }
+                cycle_paths = NULL;
+                file = NULL;
+                FILE *file = fopen("cicli.txt", "w");
+                cycle_paths = cyclic_call_internal(progetto);
             int i = 0;
                 while (cycle_paths[i]!=NULL) {
-
-                    fprintf(file, "%s", cycle_paths[i]);
+                    //printf("%s\n",cycle_paths[i]);
+                    fprintf(file, "%s\n", cycle_paths[i]);
                     i++;
                 }
+                fflush(file);
+
+
                 break;
             case 4:
                 exit(0);
@@ -527,7 +536,7 @@ char** cyclic_call_internal(progetto progetto) {
 
         int k = 0;
         while (int_path[k] != NULL) {
-            char* path_str = path_to_string(int_path[k]);
+            char* path_str = path_to_string(progetto,int_path[k]);
             if (path_str != NULL) {
                 strings_paths[j] = path_str;
                 printf("%s\n", strings_paths[j]);
@@ -548,24 +557,69 @@ char** cyclic_call_internal(progetto progetto) {
 
 
 
-char* path_to_string(int* path) {
-    if(path == NULL || path[0] == -1) return NULL;
+char* path_to_string(progetto progetto ,int* path) {
+    if (path == NULL || path[0] == -1) return NULL;
 
+    // Step 1: Calculate the length needed for the output string
     int len = 0;
     for (int i = 0; path[i] != -1; i++) {
-        len += snprintf(NULL, 0, "%d -> ", path[i]);
+        module mod = get_function_module(progetto, path[i]);
+        node_function func_node = mod ? mod->functions : NULL;
+        char* signature = NULL;
+        while (func_node != NULL && func_node->function->id_function != path[i]) {
+            func_node = func_node->next;
+        }
+        if (func_node != NULL) {
+            signature = func_node->function->signature;
+        }
+        if (mod && signature) {
+            len += snprintf(NULL, 0, "%s (%s) -> ", signature, mod->name);
+        }
     }
-    char* str = (char*)malloc(len + 1); // Allocate space for the string
+    if (len > 0) {
+        len -= 4; // Adjust length for the last " -> "
+    }
+    char * signature = get_function_by_id(progetto,path[0])->function->signature;
+    char * module_name = get_function_module(progetto,path[0])->name;
+
+    size_t len1 = strlen(" -> ");
+    size_t len2 = strlen(signature);
+    size_t len3 = strlen(" ");
+    size_t len4 = strlen("(");
+    size_t len5 = strlen(module_name);
+    size_t len6 = strlen(")");
+    size_t total_len = len1 + len2 + len3 + len4 + len5 + len6 + 1;
+
+    // Step 2: Allocate memory for the output string
+    char* str = (char*)malloc(total_len + len + 1); // +1 for the null terminator
     if (str == NULL) {
         perror("Failed to allocate memory for path string");
         exit(EXIT_FAILURE);
     }
+
+    // Step 3: Format the string
     int pos = 0;
     for (int i = 0; path[i] != -1; i++) {
-        pos += sprintf(str + pos, "%d -> ", path[i]);
+        module mod = get_function_module(progetto, path[i]);
+        node_function func_node = mod ? mod->functions : NULL;
+        char* signature = NULL;
+        while (func_node != NULL && func_node->function->id_function != path[i]) {
+            func_node = func_node->next;
+        }
+        if (func_node != NULL) {
+            signature = func_node->function->signature;
+        }
+        if (mod && signature) {
+            pos += sprintf(str + pos, "%s (%s) -> ", signature, mod->name);
+        }
     }
-    str[pos - 4] = '\0'; // Remove the trailing " -> " and null-terminate
-    return str;
+    str[pos - 4] = '\0';
+
+    //printf("%s\n",add_string_cycle(progetto,str,path[0]));
+
+
+
+    return add_string_cycle(progetto,str,path[0]);
 }
 bool is_a_cycle_path(progetto progetto, int * path){
     if (path == NULL) return false;
@@ -673,7 +727,7 @@ void print_modules(progetto progetto){
     node_module modules = progetto->modules;
 
     for(int i = 0; i < progetto->n_modules;i++){
-        printf("%s",modules->module->name);
+        printf("%s\n",modules->module->name);
         modules = modules->next;
     }
 }
@@ -681,12 +735,12 @@ void print_modules_and_functions(progetto progetto){
     node_module modules = progetto->modules;
 
     while (modules != NULL) {
-        printf("- Module: %s", modules->module->name);
+        printf("- Module: %s\n", modules->module->name);
         printf("  Functions:\n");
 
         node_function functions = modules->module->functions;
         while (functions != NULL) {
-            printf("    - Function: %s", functions->function->signature);
+            printf("    - Function: %s\n", functions->function->signature);
             printf("      ID: %d\n", functions->function->id_function);
 
             functions = functions->next;
@@ -695,3 +749,42 @@ void print_modules_and_functions(progetto progetto){
         modules = modules->next;
     }
     }
+node_function get_function_by_id(progetto progetto,int id){
+    node_module modules = progetto->modules;
+    while (modules != NULL){
+        node_function nodeFunction = modules->module->functions;
+        while (nodeFunction != NULL){
+            if(nodeFunction->function->id_function == id) return nodeFunction;
+            nodeFunction = nodeFunction->next;
+        }
+        modules = modules->next;
+    }
+    return NULL;
+}
+char * add_string_cycle(progetto progetto,char * str, int id){
+
+    char * signature = get_function_by_id(progetto,id)->function->signature;
+    char * module_name = get_function_module(progetto,id)->name;
+
+    size_t len1 = strlen(" -> ");
+    size_t len2 = strlen(signature);
+    size_t len3 = strlen(" ");
+    size_t len4 = strlen("(");
+    size_t len5 = strlen(module_name);
+    size_t len6 = strlen(")");
+    size_t total_len = len1 + len2 + len3 + len4 + len5 + len6 + 1;
+
+
+    char * temp = (char*) malloc(total_len * sizeof(char) );
+    temp[0] = '\0';
+
+    strcat(temp," -> ");
+    strcat(temp,signature);
+    strcat(temp," ");
+    strcat(temp,"(");
+    strcat(temp,module_name);
+    strcat(temp,")");
+    strcat(str,temp);
+
+    return str;
+}

@@ -18,11 +18,13 @@ void findAllPathsUtil(progetto progetto, int u, int dst, int visited[], int path
 module get_function_module(progetto progetto, int id_function);
 void print_functions_cycle(progetto my_project , int** paths);
 bool vertex_exists(progetto progetto, int vertex_id);
-char* path_to_string(int* path);
+char* path_to_string(progetto progetto,int* path);
 bool is_a_cycle_path(progetto progetto, int * path);
 void print_string_array(char **array);
 bool is_already_printed(int index, const int * indexes, int dim);
 void reset(int * array, int dim);
 void print_modules(progetto progetto);
 void print_modules_and_functions(progetto progetto);
+node_function get_function_by_id(progetto progetto,int id);
+char * add_string_cycle(progetto progetto,char * str, int id);
 
