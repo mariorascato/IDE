@@ -36,7 +36,6 @@ int main() {
     char * project_name = (char*) malloc(sizeof(char ) * 20);
     char * signature = (char*) malloc(sizeof(char ) * 40);
     char * nome_modulo = (char*) malloc(sizeof(char ) * 10);
-    FILE *file;
     char** cycle_paths;
     int internal_choice;
     int functions_choice;
@@ -73,10 +72,10 @@ int main() {
 
                 printf("Inserisci nuovo modulo:\n - inserisci il nome del modulo:\n");
 
-                fgets(nome_modulo, 10, stdin);
+                fgets(nome_modulo, 20, stdin);
                 nome_modulo[strcspn(nome_modulo, "\n")] = '\0';
 
-                printf("Il modulo inserito è interno?\n");
+                printf("Il modulo inserito e' interno?\n");
 
 
 
@@ -141,6 +140,7 @@ int main() {
 
                 break;
             case 2:
+                if(progetto->n_functions < 2) break;
 
 
                 do {
@@ -181,7 +181,6 @@ int main() {
         break;
             case 3:
                 cycle_paths = NULL;
-                file = NULL;
                 FILE *file = fopen("cicli.txt", "w");
                 cycle_paths = cyclic_call_internal(progetto);
             int i = 0;
@@ -195,6 +194,14 @@ int main() {
 
                 break;
             case 4:
+                free(progetto);
+                free(project_name);
+                free(signature);
+                free(nome_modulo);
+                free(path_h);
+                free(path_c);
+
+
                 exit(0);
             default:
                 break;
@@ -206,6 +213,7 @@ int main() {
 
 
 progetto create_project(char * name, int max_size){
+    if(name == NULL) return NULL;
 
     progetto progetto = (struct _progetto *) malloc(sizeof(struct _progetto));
     progetto->max_size = max_size;
@@ -225,7 +233,9 @@ progetto create_project(char * name, int max_size){
     return progetto;
 
 }
-bool add_module_to_project(const char * path_h, char * path_c, bool external,progetto project,char* name){
+bool add_module_to_project(const char * path_h, char * path_c, bool external, progetto progetto, char* name){
+    if(progetto == NULL || name == NULL) return false;
+
     module module = (struct _module*) malloc(sizeof(struct _module));
     if(external){
         if (path_h == NULL) return false;
@@ -240,20 +250,20 @@ bool add_module_to_project(const char * path_h, char * path_c, bool external,pro
 
     module->functions = NULL;
     module->external = external;
-    module->id_module = project->n_modules;
-    project->n_modules ++;
+    module->id_module = progetto->n_modules;
+    progetto->n_modules ++;
 
 
-    node_module current = project->modules;
+    node_module current = progetto->modules;
 
 
 
     if (current == NULL) {
-        project->modules = (struct _node_module *) malloc(sizeof(struct _node_module));
-        project->modules->module = module;
-        project->modules->next = NULL;
+        progetto->modules = (struct _node_module *) malloc(sizeof(struct _node_module));
+        progetto->modules->module = module;
+        progetto->modules->next = NULL;
     } else {
-        // Altrimenti, scorrere la lista fino a trovare il primo nodo disponibile
+
         while (current->next != NULL) {
             current = current->next;
         }
@@ -304,20 +314,22 @@ bool add_function_to_module(progetto project, char * module_name,char * function
 
 
 }
-bool called_function(progetto project,int id_chiamante, int id_chiamata){
-    if(id_chiamante < 0 || id_chiamata < 0 || id_chiamante >= project->n_functions || id_chiamata >= project->n_functions) return false;
+bool called_function(progetto progetto, int id_chiamante, int id_chiamata){
+    if(!vertex_exists(progetto, id_chiamata) || !vertex_exists(progetto, id_chiamante)) return false;
 
-    project->called_functions[id_chiamante][id_chiamata] = true;
+    progetto->called_functions[id_chiamante][id_chiamata] = true;
     return true;
 }
 module get_module(progetto progetto){
+    if(progetto == NULL) return NULL;
+
     int n_moduli = 0;
-    node_module current_module = progetto->modules;
+    node_module modulo_corrente = progetto->modules;
 
     // Conta il numero di moduli nel progetto
-    while (current_module != NULL) {
+    while (modulo_corrente != NULL) {
         n_moduli++;
-        current_module = current_module->next;
+        modulo_corrente = modulo_corrente->next;
     }
 
     // Array per contare il numero di chiamate per ogni modulo
@@ -329,17 +341,17 @@ module get_module(progetto progetto){
     // Mappatura da ID funzione a modulo
     module *mappa_funzione_modulo = (module *) malloc(sizeof(module) * progetto->max_size);
 
-    current_module = progetto->modules;
+    modulo_corrente = progetto->modules;
     int index_module = 0;
 
     // Associa ogni funzione al modulo a cui appartiene
-    while (current_module != NULL) {
-        node_function current_function = current_module->module->functions;
+    while (modulo_corrente != NULL) {
+        node_function current_function = modulo_corrente->module->functions;
         while (current_function != NULL) {
-            mappa_funzione_modulo[current_function->function->id_function] = current_module->module;
+            mappa_funzione_modulo[current_function->function->id_function] = modulo_corrente->module;
             current_function = current_function->next;
         }
-        current_module = current_module->next;
+        modulo_corrente = modulo_corrente->next;
         index_module++;
     }
 
@@ -376,47 +388,24 @@ module get_module(progetto progetto){
     }
 
     // Restituisci il modulo corrispondente
-    current_module = progetto->modules;
+    modulo_corrente = progetto->modules;
     for (int i = 0; i < indice_modulo_importante; i++) {
-        current_module = current_module->next;
+        modulo_corrente = modulo_corrente->next;
     }
 
     free(chiamate);
     free(mappa_funzione_modulo);
 
-    return current_module->module;
+    return modulo_corrente->module;
 }
-int get_neighbors(progetto progetto, int vertex_id, int* result, int how_many) {
-    if (!vertex_exists(progetto, vertex_id) || how_many <= 0)
-        return -1;
-
-    int dim = 0;
-
-    for (int j = 0; j < progetto->n_functions; j++) {
-        if (progetto->called_functions[vertex_id][j]) {
-            result[dim] = j;
-            dim++;
-
-            if (dim == how_many) {
-                return dim;
-            }
-        }
-    }
-
-    return dim;
-}
-bool vertex_exists(progetto progetto, int vertex_id) {
-    return (vertex_id >= 0 && vertex_id < progetto->n_functions);
-}
-void findAllPathsUtil(progetto progetto, int u, int dst, int visited[], int path[], int pathLen, int ** allPaths, int *pathCount) {
+void findAllPathsUtil(progetto progetto, int nodo_corrente, int destinazione, int visited[], int path[], int pathLen, int ** allPaths, int *pathCount) {
     // Marca il nodo corrente come visitato e memorizzalo nel percorso attuale
-    // Marca il nodo corrente come visitato e memorizzalo nel percorso attuale
-    visited[u] = 1;
-    path[pathLen] = u;
+    visited[nodo_corrente] = 1;
+    path[pathLen] = nodo_corrente;
     pathLen++;
 
     // Se il nodo corrente è la destinazione, memorizza il percorso trovato
-    if (u == dst) {
+    if (nodo_corrente == destinazione) {
         for (int i = 0; i < pathLen; i++) {
             allPaths[*pathCount][i] = path[i];
         }
@@ -426,18 +415,19 @@ void findAllPathsUtil(progetto progetto, int u, int dst, int visited[], int path
     } else {
         // Esplora i nodi adiacenti al nodo corrente
         for (int v = 0; v < progetto->n_functions; v++) {
-            if (progetto->called_functions[u][v] && !visited[v]) {
-                findAllPathsUtil(progetto, v, dst, visited, path, pathLen, allPaths, pathCount);
+            if (progetto->called_functions[nodo_corrente][v] && !visited[v]) {
+                findAllPathsUtil(progetto, v, destinazione, visited, path, pathLen, allPaths, pathCount);
             }
         }
     }
 
     // Backtracking
-    visited[u] = 0;
+    visited[nodo_corrente] = 0;
 
 }
 int** exist_cyclic(progetto progetto, int source_id) {
-    if(get_function_module(progetto,source_id)->external) return NULL;
+
+    if(progetto == NULL|| get_function_module(progetto,source_id)->external|| !vertex_exists(progetto,source_id)) return NULL;
 
 
     int* visited = (int*)calloc(progetto->n_functions, sizeof(int));
@@ -489,6 +479,8 @@ int** exist_cyclic(progetto progetto, int source_id) {
 
 }
 module get_function_module(progetto progetto, int id_function){
+    if(progetto == NULL|| !vertex_exists(progetto,id_function)) return NULL;
+
     node_module modules = progetto->modules;
     while (modules != NULL){
         node_function functions = modules->module->functions;
@@ -502,14 +494,14 @@ module get_function_module(progetto progetto, int id_function){
     }
     return NULL;
 }
-void print_functions_cycle(progetto my_project , int** paths){
+void print_functions_cycle(progetto progetto , int** paths){
     if (paths != NULL) {
         // Stampa i percorsi trovati
         printf("Percorsi trovati:\n");
-        for (int i = 0; i < my_project->max_size; i++) {
+        for (int i = 0; i < progetto->max_size; i++) {
             printf("%d\n",i);
             if (paths[i] == NULL) continue;
-            for (int j = 0; j < my_project->n_functions && paths[i][j] != -1; j++) {
+            for (int j = 0; j < progetto->n_functions && paths[i][j] != -1; j++) {
                 printf("%d ", paths[i][j]);
             }
             printf("\n");
@@ -519,6 +511,8 @@ void print_functions_cycle(progetto my_project , int** paths){
     }
 }
 char** cyclic_call_internal(progetto progetto) {
+
+    if(progetto == NULL) return NULL;
 
     int max_size = progetto->max_size * progetto->n_functions;
 
@@ -558,7 +552,7 @@ char** cyclic_call_internal(progetto progetto) {
 
 
 char* path_to_string(progetto progetto ,int* path) {
-    if (path == NULL || path[0] == -1) return NULL;
+    if (path == NULL || path[0] == -1 || progetto == NULL ) return NULL;
 
     // Step 1: Calculate the length needed for the output string
     int len = 0;
@@ -600,8 +594,8 @@ char* path_to_string(progetto progetto ,int* path) {
     // Step 3: Format the string
     int pos = 0;
     for (int i = 0; path[i] != -1; i++) {
-        module mod = get_function_module(progetto, path[i]);
-        node_function func_node = mod ? mod->functions : NULL;
+        module modulo = get_function_module(progetto, path[i]);
+        node_function func_node = modulo ? modulo->functions : NULL;
         char* signature = NULL;
         while (func_node != NULL && func_node->function->id_function != path[i]) {
             func_node = func_node->next;
@@ -609,8 +603,8 @@ char* path_to_string(progetto progetto ,int* path) {
         if (func_node != NULL) {
             signature = func_node->function->signature;
         }
-        if (mod && signature) {
-            pos += sprintf(str + pos, "%s (%s) -> ", signature, mod->name);
+        if (modulo && signature) {
+            pos += sprintf(str + pos, "%s (%s) -> ", signature, modulo->name);
         }
     }
     str[pos - 4] = '\0';
@@ -622,13 +616,13 @@ char* path_to_string(progetto progetto ,int* path) {
     return add_string_cycle(progetto,str,path[0]);
 }
 bool is_a_cycle_path(progetto progetto, int * path){
-    if (path == NULL) return false;
+    if (path == NULL|| progetto == NULL) return false;
 
     int i = 0;
     while (i < progetto->n_functions && path[i] != -1) {
-        module mod = get_function_module(progetto, path[i]);
-        if (mod == NULL || mod->external) {
-            // Se mod è NULL, evita di accedere a locazioni di memoria non valide
+        module modulo = get_function_module(progetto, path[i]);
+        if (modulo == NULL || modulo->external) {
+            // Se modulo è NULL, evita di accedere a locazioni di memoria non valide
 
             return false;
         }
@@ -655,6 +649,8 @@ void print_string_array(char **array) {
     }
 }
 char* project_structure(progetto progetto){
+
+    if(progetto == NULL) return "Progetto non esistente\0";
 
     char * structure = (char*) malloc(sizeof(char) * 1000);
     structure[0] = '\0';
@@ -722,7 +718,7 @@ void reset(int * array, int dim){
     }
 }
 void print_modules(progetto progetto){
-    if(progetto->n_modules == 0) return;
+    if(progetto == NULL || progetto->n_modules == 0) return;
 
     node_module modules = progetto->modules;
 
@@ -732,15 +728,17 @@ void print_modules(progetto progetto){
     }
 }
 void print_modules_and_functions(progetto progetto){
+    if(progetto == NULL) return;
+
     node_module modules = progetto->modules;
 
     while (modules != NULL) {
-        printf("- Module: %s\n", modules->module->name);
-        printf("  Functions:\n");
+        printf("- Modulo: %s\n", modules->module->name);
+        printf("  Funzioni:\n");
 
         node_function functions = modules->module->functions;
         while (functions != NULL) {
-            printf("    - Function: %s\n", functions->function->signature);
+            printf("    - Funzione: %s\n", functions->function->signature);
             printf("      ID: %d\n", functions->function->id_function);
 
             functions = functions->next;
@@ -750,6 +748,8 @@ void print_modules_and_functions(progetto progetto){
     }
     }
 node_function get_function_by_id(progetto progetto,int id){
+    if(!vertex_exists(progetto,id)|| progetto == NULL) return NULL;
+
     node_module modules = progetto->modules;
     while (modules != NULL){
         node_function nodeFunction = modules->module->functions;
@@ -787,4 +787,7 @@ char * add_string_cycle(progetto progetto,char * str, int id){
     strcat(str,temp);
 
     return str;
+}
+bool vertex_exists(progetto progetto, int vertex_id) {
+    return (vertex_id >= 0 && vertex_id < progetto->n_functions);
 }
